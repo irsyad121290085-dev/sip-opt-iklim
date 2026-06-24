@@ -2,12 +2,24 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+from style import apply_global_style, hero
+
+ENSO_COLORS = {
+    "El Niño": "#f97316",
+    "La Niña": "#0284c7",
+    "Netral": "#65a30d",
+    "Tidak ada data": "#94a3b8",
+}
 
 st.set_page_config(
     page_title="Analisis ENSO",
     page_icon="🌊",
     layout="wide"
 )
+
+apply_global_style()
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
@@ -105,9 +117,12 @@ fig1 = px.bar(
     enso_summary,
     x="Kondisi ENSO",
     y="Total Luas Serangan (Ha)",
+    color="Kondisi ENSO",
+    color_discrete_map=ENSO_COLORS,
     hover_data=["Tavg_C", "PRCP", "Nino34"],
     title="Total Luas Serangan OPT pada El Niño, La Niña, dan Netral"
 )
+fig1.update_layout(plot_bgcolor="rgba(255,255,255,0)", paper_bgcolor="rgba(255,255,255,0)")
 
 st.plotly_chart(fig1, use_container_width=True)
 
@@ -130,9 +145,11 @@ fig2 = px.line(
     x="Tahun",
     y="Total Luas Serangan (Ha)",
     color="Kondisi ENSO",
+    color_discrete_map=ENSO_COLORS,
     markers=True,
     title="Tren Serangan OPT per Tahun Berdasarkan ENSO"
 )
+fig2.update_layout(plot_bgcolor="rgba(255,255,255,0)", paper_bgcolor="rgba(255,255,255,0)")
 
 st.plotly_chart(fig2, use_container_width=True)
 
@@ -148,15 +165,23 @@ scatter_data = (
         })
 )
 
+# Plotly tidak menerima nilai NaN pada ukuran titik.
+# Karena ada beberapa data curah hujan kosong, dibuat kolom khusus untuk ukuran titik.
+scatter_data = scatter_data.dropna(subset=["Nino34", "Total Luas Serangan (Ha)"]).copy()
+scatter_data["Ukuran Titik Curah Hujan"] = scatter_data["PRCP"].fillna(0).clip(lower=0) + 1
+
 fig3 = px.scatter(
     scatter_data,
     x="Nino34",
     y="Total Luas Serangan (Ha)",
-    size="PRCP",
+    size="Ukuran Titik Curah Hujan",
+    size_max=38,
     color="Kondisi ENSO",
-    hover_data=["Tahun", "Triwulan", "Provinsi", "Tavg_C"],
+    color_discrete_map=ENSO_COLORS,
+    hover_data=["Tahun", "Triwulan", "Provinsi", "PRCP", "Tavg_C"],
     title="Scatter Nino34 vs Luas Serangan OPT"
 )
+fig3.update_layout(plot_bgcolor="rgba(255,255,255,0)", paper_bgcolor="rgba(255,255,255,0)")
 
 st.plotly_chart(fig3, use_container_width=True)
 
